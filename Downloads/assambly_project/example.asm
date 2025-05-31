@@ -1,6 +1,5 @@
-ORG $100
-START:LDAA #$25
-      STAA $0200
-      NOP
-      JMP START
-      END
+ORG $0050
+LDAA #$AA
+    KAYDET: STAA $00F0
+    JMP KAYDET
+    END

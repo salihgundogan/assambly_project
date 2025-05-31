@@ -1,6 +1,6 @@
-ORG $100
-START:LDAA #$25
-      STAA $0200
-      NOP
-      JMP START
-      END
+ORG $0040
+LDAA #$C3
+STAA $55
+LDAA #$D4
+STAA $0455
+END

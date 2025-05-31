@@ -78,8 +78,6 @@ while True:
         temp_asm_file = "temp_code.asm" 
         with open(temp_asm_file, "w", encoding='utf-8') as f: # encoding eklendi
             f.write(assembly_kodu)
-        
-            executable_name = 'main.exe' # Windows için        if os.name != 'nt': # Eğer Windows değilse (Linux, macOS)
             executable_name = './assembler'
 
 
