@@ -1,8 +1,18 @@
-ORG $0050
-LDAA #$12
-STAA $0060
-LDAA #$A5
-STAA $0061
-NOP
-LOOP: JMP LOOP
-END
+ORG $0100        
+
+    LDAA #$0E  
+    STAA $0200  
+
+    INCA        
+    STAA $0051  
+
+    LDAA #$7F   
+    INCA        
+    STAA $0053  
+
+    LDAA #$FF   
+    INCA        
+    STAA $0055  
+
+    SWI        
+    END

@@ -13,13 +13,12 @@ InstructionSet instructionSet;
 
 string decimal_to_hex(string decimalStr)
 {
-    // Gelen string boşsa veya sayıya çevrilemiyorsa hata yönetimi eklenebilir.
-    if (decimalStr.empty()) return "XX"; // Veya hata fırlat
+    if (decimalStr.empty()) return "XX"; //
     try {
         istringstream iss(decimalStr);
-        long long decimal_val; // Daha büyük sayılar için long long
+        long long decimal_val; //
         iss >> decimal_val;
-        if (iss.fail() || !iss.eof()) { // Tamamen sayıya çevrilemediyse
+        if (iss.fail() || !iss.eof()) { // 
              // Eğer zaten hex ise (örn: "A", "B") ve decimal_to_hex'e geldiyse, bu bir mantık hatasıdır.
              // Ama #sayı formatında decimal bekliyoruz.
             // cerr << "Uyarı: decimal_to_hex geçersiz onluk sayı: " << decimalStr << endl;
@@ -105,8 +104,12 @@ void parse(string line, int lineNumber, int &LC)
 
     string processedLineForRegex = trim_whitespace(line);
 
-    if (processedLineForRegex.empty()) {
-        return;
+    if (processedLineForRegex.empty()) { // Tamamen boş veya sadece yorumdan oluşan satırları atla
+        // Eğer orijinal satırda sadece etiket varsa, bu regex_match içinde ele alınacak.
+        // Bu kontrol, regex'e gitmeden önce tamamen boş satırları filtreler.
+        if (trim_whitespace(originalLineForDisplay).find_first_not_of(" \t\n\r\f\v;") == string::npos) {
+            return;
+        }
     }
 
     smatch matches;
@@ -120,46 +123,24 @@ void parse(string line, int lineNumber, int &LC)
         string actual_operand_value_str; 
         string register_operand_str;   
 
-        // Regex'inizin operandları nasıl yakaladığına göre bu kısım çok önemlidir.
-        // LDAA #$25 -> regex'in matches[3]="LDAA", matches[4]="#$25" yakalaması beklenir.
-        // VEYA matches[3]="A", matches[4]="#$25" (eğer LDAA yerine LDA A yazılırsa)
-        // VEYA matches[3]="A, #$25" (tek grup)
-        // Bu kısım sizin regex'inize göre ayarlanmalı.
-        // Önceki kodunuzda LDA/STA için bir mantık vardı, onu temel alalım.
-        // Komut adını da düzeltelim (LDA -> LDAA)
-        if ((instruction_mnemonic == "LDA" || instruction_mnemonic == "LDAA") || (instruction_mnemonic == "STA" || instruction_mnemonic == "STAA")) {
-            if (instruction_mnemonic == "LDA") instruction_mnemonic = "LDAA";
-            if (instruction_mnemonic == "STA") instruction_mnemonic = "STAA";
-
-            if (!operand2_raw.empty()) { // Eğer regex operand2'yi (matches[4]) yakaladıysa (örn: LDA A, #$25)
-                register_operand_str = operand1_raw;       // "A"
-                actual_operand_value_str = operand2_raw;   // "#$25"
-            } else if (!operand1_raw.empty()) {        // Sadece operand1_raw (matches[3]) doluysa
-                size_t comma_pos = operand1_raw.find(',');
-                if (comma_pos != string::npos) {       // "A,#$25" gibi virgülle ayrılmışsa
-                    register_operand_str = trim_whitespace(operand1_raw.substr(0, comma_pos));
-                    actual_operand_value_str = trim_whitespace(operand1_raw.substr(comma_pos + 1));
-                } else {                              // Bu durum LDAA #$25 (register belirtilmemiş) veya LDAA $ADRES için.
-                                                      // Eğer register_operand_str boşsa ve komut A/B ile çalışıyorsa, A varsayalım.
-                    if (instruction_mnemonic == "LDAA" || instruction_mnemonic == "STAA") {
-                        // register_operand_str = "A"; // Bunu varsaymak yerine, komut setinden kontrol edilebilir.
-                                                    // Şimdilik, eğer operand1_raw '#' veya '$' ile başlamıyorsa,
-                                                    // ve register değilse, bu bir etiket olabilir.
-                                                    // Ama LDAA/STAA için bu durum biraz farklı.
-                                                    // Eğer LDAA #$25 ise, register_operand_str boş, actual_operand_value_str = #$25
-                                                    // Eğer LDAA $ADR ise, register_operand_str boş, actual_operand_value_str = $ADR
-                        actual_operand_value_str = operand1_raw;
-                    } else { // JMP gibi durumlar
-                         actual_operand_value_str = operand1_raw;
-                    }
-                }
+        // Operand ayrıştırma mantığı (Regex'inizin davranışına göre ayarlanmalı)
+        if (!operand2_raw.empty()) { 
+            register_operand_str = operand1_raw;       
+            actual_operand_value_str = operand2_raw;   
+        } else if (!operand1_raw.empty()) {        
+            size_t comma_pos = operand1_raw.find(',');
+            if (comma_pos != string::npos) {       
+                register_operand_str = trim_whitespace(operand1_raw.substr(0, comma_pos));
+                actual_operand_value_str = trim_whitespace(operand1_raw.substr(comma_pos + 1));
+            } else {                              
+                actual_operand_value_str = operand1_raw;
             }
-        } else { // NOP, JMP gibi durumlar
-            actual_operand_value_str = operand1_raw; 
         }
+        // LDAA/STAA gibi komutlarda eğer register_operand_str boşsa ve komut "A" ile çalışıyorsa,
+        // ve actual_operand_value_str bir adres veya immediate değerse, bu geçerli olabilir.
+        // Örn: LDAA #$25 (register_operand_str boş, actual_operand_value_str = #$25)
 
-
-        if (!label.empty() && instruction_mnemonic.empty() && actual_operand_value_str.empty()) {
+        if (!label.empty() && instruction_mnemonic.empty() && actual_operand_value_str.empty() && register_operand_str.empty()) {
             if (symbolTable.get_symbol(label) == nullopt) {
                 symbolTable.add_symbol(label, LC);
                 cout << processedLineForRegex << " -> (Label Definition at $" << hex << uppercase << LC << ")" << endl;
@@ -169,7 +150,15 @@ void parse(string line, int lineNumber, int &LC)
             return; 
         }
         
-        if (instruction_mnemonic.empty()) {
+        if (instruction_mnemonic.empty()) { // Etiket olabilir ama komut yoksa yukarıda işlendi.
+            if (!label.empty() && !processedLineForRegex.empty() && processedLineForRegex != label + ":") {
+                 // Etiket var ama komut yok ve satırda başka bir şey varsa (örn: ETIKET:   )
+                 // Bu durum yukarıdaki label-only check ile yakalanmalı.
+            } else if (processedLineForRegex.empty()){
+                return; // Tamamen boş veya sadece yorum ise dön.
+            }
+            // Eğer buraya gelindiyse ve komut boşsa, muhtemelen bir regex eşleşme sorunu veya format hatasıdır.
+            // cerr << "Warning (Line " << lineNumber << "): No instruction mnemonic found in: '" << processedLineForRegex << "'" << endl;
             return;
         }
 
@@ -208,6 +197,11 @@ void parse(string line, int lineNumber, int &LC)
             return; 
         }
 
+        // Komut adını düzeltme (LDA -> LDAA, STA -> STAA)
+        if (instruction_mnemonic == "LDA" && instructionSet.is_instruction("LDAA")) instruction_mnemonic = "LDAA";
+        if (instruction_mnemonic == "STA" && instructionSet.is_instruction("STAA")) instruction_mnemonic = "STAA";
+        // INCA için böyle bir durum yok, genellikle tek formattadır.
+
         if (!instructionSet.is_instruction(instruction_mnemonic))
         {
             cerr << "Error (Line " << lineNumber << "): Invalid instruction '" << instruction_mnemonic << "'" << endl;
@@ -233,70 +227,150 @@ void parse(string line, int lineNumber, int &LC)
                     cerr << "Error (Line " << lineNumber << "): Immediate value missing for LDAA." << endl;
                 }
             }
-            // Diğer LDAA modları (DIRECT, EXTENDED, INDEXED) buraya eklenebilir.
-            // Örnek: else if (actual_operand_value_str[0] == '$') { ... }
-            else {
-                 cerr << "Error (Line " << lineNumber << "): Invalid or unsupported operand for LDAA: " << actual_operand_value_str << endl;
-                 cout << processedLineForRegex << " -> ERROR (LDAA Operand)" << endl;
-                 return;
+            else if (!actual_operand_value_str.empty() && actual_operand_value_str[0] == '$') { // LDAA $ADDR
+                string addr_str = actual_operand_value_str.substr(1);
+                vector<uint8_t> temp_addr_bytes = hex_string_to_bytes(addr_str);
+                if (temp_addr_bytes.size() == 1) {
+                    determined_mode = AddressingMode::DIRECT;
+                    operand_bytes_vec = temp_addr_bytes;
+                } else if (temp_addr_bytes.size() == 2) {
+                    determined_mode = AddressingMode::EXTENDED;
+                    operand_bytes_vec = temp_addr_bytes;
+                } else {
+                    cerr << "Error (Line " << lineNumber << "): Address '"+actual_operand_value_str+"' invalid for LDAA." << endl;
+                }
+            }
+            // TODO: LDAA için INDEXED modu eklenebilir.
+            else { // Etiket veya tanımsız operand olabilir
+                 // Şimdilik etiketleri DIRECT veya EXTENDED olarak varsayalım (JMP'deki gibi)
+                auto symbol_val = symbolTable.get_symbol(actual_operand_value_str);
+                if (symbol_val.has_value()) {
+                    // Komut setinden LDAA'nın DIRECT ve EXTENDED versiyonlarını kontrol et
+                    bool has_direct = instructionSet.get_instruction_wrt_address_mode(instruction_mnemonic, AddressingMode::DIRECT).has_value();
+                    bool has_extended = instructionSet.get_instruction_wrt_address_mode(instruction_mnemonic, AddressingMode::EXTENDED).has_value();
+
+                    if (has_direct && symbol_val.value() <= 0xFF) {
+                        determined_mode = AddressingMode::DIRECT;
+                        operand_bytes_vec = hex_string_to_bytes(decimal_to_hex(to_string(symbol_val.value() & 0xFF)));
+                    } else if (has_extended) {
+                        determined_mode = AddressingMode::EXTENDED;
+                        stringstream ss_label_hex;
+                        ss_label_hex << hex << setw(4) << setfill('0') << uppercase << symbol_val.value();
+                        operand_bytes_vec = hex_string_to_bytes(ss_label_hex.str());
+                    } else {
+                         cerr << "Error (Line " << lineNumber << "): No suitable addressing mode for LDAA with label '" << actual_operand_value_str << "'" << endl;
+                    }
+                } else if (!actual_operand_value_str.empty()){ // Etiket değil ve # veya $ ile başlamıyorsa
+                     cerr << "Error (Line " << lineNumber << "): Invalid or unsupported operand for LDAA: " << actual_operand_value_str << endl;
+                     cout << processedLineForRegex << " -> ERROR (LDAA Operand)" << endl;
+                     return;
+                } else { // Operandsız LDAA (hatalı)
+                    cerr << "Error (Line " << lineNumber << "): Operand missing for LDAA." << endl;
+                    cout << processedLineForRegex << " -> ERROR (LDAA Operand)" << endl;
+                    return;
+                }
             }
         } else if (instruction_mnemonic == "STAA") { 
             if (!actual_operand_value_str.empty() && actual_operand_value_str[0] == '$') { 
                 string addr_str = actual_operand_value_str.substr(1); 
                 vector<uint8_t> temp_addr_bytes = hex_string_to_bytes(addr_str);
 
-                if (temp_addr_bytes.size() == 1) { // 00-FF arası
+                if (temp_addr_bytes.size() == 1) { 
                     determined_mode = AddressingMode::DIRECT;
                     operand_bytes_vec = temp_addr_bytes; 
-                } else if (temp_addr_bytes.size() == 2) { // 0000-FFFF arası
+                } else if (temp_addr_bytes.size() == 2) { 
                     determined_mode = AddressingMode::EXTENDED;
                     operand_bytes_vec = temp_addr_bytes; 
-                } else if (!addr_str.empty()){ // addr_str boş değil ama byte'a çevrilemedi veya boyutu yanlış
+                } else if (!addr_str.empty()){ 
                     cerr << "Error (Line " << lineNumber << "): Address '"+actual_operand_value_str+"' invalid size or format for STAA." << endl;
                 } else {
                      cerr << "Error (Line " << lineNumber << "): Address missing for STAA." << endl;
                 }
             }
-             // Diğer STAA modları (INDEXED) buraya eklenebilir.
-            else {
-                 cerr << "Error (Line " << lineNumber << "): Invalid or unsupported operand for STAA: " << actual_operand_value_str << endl;
-                 cout << processedLineForRegex << " -> ERROR (STAA Operand)" << endl;
-                 return;
+            else { // Etiket veya tanımsız operand
+                auto symbol_val = symbolTable.get_symbol(actual_operand_value_str);
+                if (symbol_val.has_value()) {
+                    bool has_direct = instructionSet.get_instruction_wrt_address_mode(instruction_mnemonic, AddressingMode::DIRECT).has_value();
+                    bool has_extended = instructionSet.get_instruction_wrt_address_mode(instruction_mnemonic, AddressingMode::EXTENDED).has_value();
+
+                    if (has_direct && symbol_val.value() <= 0xFF) {
+                        determined_mode = AddressingMode::DIRECT;
+                        operand_bytes_vec = hex_string_to_bytes(decimal_to_hex(to_string(symbol_val.value() & 0xFF)));
+                    } else if (has_extended) {
+                        determined_mode = AddressingMode::EXTENDED;
+                        stringstream ss_label_hex;
+                        ss_label_hex << hex << setw(4) << setfill('0') << uppercase << symbol_val.value();
+                        operand_bytes_vec = hex_string_to_bytes(ss_label_hex.str());
+                    } else {
+                         cerr << "Error (Line " << lineNumber << "): No suitable addressing mode for STAA with label '" << actual_operand_value_str << "'" << endl;
+                    }
+                } else if (!actual_operand_value_str.empty()){
+                     cerr << "Error (Line " << lineNumber << "): Invalid or unsupported operand for STAA: " << actual_operand_value_str << endl;
+                     cout << processedLineForRegex << " -> ERROR (STAA Operand)" << endl;
+                     return;
+                } else {
+                    cerr << "Error (Line " << lineNumber << "): Operand missing for STAA." << endl;
+                    cout << processedLineForRegex << " -> ERROR (STAA Operand)" << endl;
+                    return;
+                }
             }
         } else if (instruction_mnemonic == "NOP") {
             determined_mode = AddressingMode::IMPLIED;
+        } else if (instruction_mnemonic == "INCA") { // INCA EKLENDİ
+            determined_mode = AddressingMode::IMPLIED;
+            // INCA operand almaz, operand_bytes_vec boş kalır.
+            // register_operand_str "A" olmalıydı, ama IMPLIED modda bu zaten bellidir.
         } else if (instruction_mnemonic == "JMP") { 
-            determined_mode = AddressingMode::EXTENDED; 
+            determined_mode = AddressingMode::EXTENDED; // JMP için genellikle Extended veya Indexed
             auto symbol_addr = symbolTable.get_symbol(actual_operand_value_str);
             if (symbol_addr.has_value()) {
                 stringstream ss_label_hex;
                 ss_label_hex << hex << setw(4) << setfill('0') << uppercase << symbol_addr.value(); 
                 operand_bytes_vec = hex_string_to_bytes(ss_label_hex.str()); 
             } else {
-                // Eğer doğrudan adres verilmişse (JMP $ADDR)
-                if (actual_operand_value_str[0] == '$') {
+                if (!actual_operand_value_str.empty() && actual_operand_value_str[0] == '$') {
                     string addr_str = actual_operand_value_str.substr(1);
                     operand_bytes_vec = hex_string_to_bytes(addr_str);
-                    if (operand_bytes_vec.size() != 2) { // JMP EXTENDED 2 byte adres alır
+                    if (operand_bytes_vec.size() != 2) { 
                         cerr << "Error (Line " << lineNumber << "): JMP address '"+actual_operand_value_str+"' must be 2 bytes for EXTENDED mode." << endl;
-                        operand_bytes_vec.clear(); // Hatalıysa temizle
-                        operand_bytes_vec.push_back(0xEE); operand_bytes_vec.push_back(0xEE); // Hata göstergesi
+                        operand_bytes_vec.assign(2, 0xEE); // Hata göstergesi
                     }
+                } else if (!actual_operand_value_str.empty()){
+                    cerr << "Error (Line " << lineNumber << "): Undefined symbol or invalid address '" << actual_operand_value_str << "' for JMP" << endl;
+                    operand_bytes_vec.assign(2, 0xEE); 
                 } else {
-                    cerr << "Error (Line " << lineNumber << "): Undefined symbol '" << actual_operand_value_str << "' for JMP" << endl;
-                    operand_bytes_vec.push_back(0xEE); 
-                    operand_bytes_vec.push_back(0xEE);
+                     cerr << "Error (Line " << lineNumber << "): Operand missing for JMP." << endl;
+                     operand_bytes_vec.assign(2, 0xEE);
                 }
             }
         } else {
-            // Demo için diğer komutlar işlenmiyor, hata basılabilir veya XX ile geçilebilir.
-            // cerr << "Warning (Line " << lineNumber << "): Addressing mode for '" << instruction_mnemonic << "' not implemented for demo." << endl;
+            // Diğer komutlar için genel bir fallback (varsa)
             auto variants = instructionSet.get_instruction(instruction_mnemonic);
             if(!variants.empty()){
-                 determined_mode = variants[0].addressing_mode; // İlk bulduğunu al
-            } else { // Bu durum olmamalı, is_instruction kontrolü var.
-                 cout << processedLineForRegex << " -> ERROR (Unknown instruction variant)" << endl;
-                 return;
+                 // En yaygın olanı veya ilk bulduğunu alabiliriz.
+                 // Bu kısım daha sofistike bir adresleme modu belirleme gerektirir.
+                 // Şimdilik, eğer operandsız bir komutsa IMPLIED varsayalım.
+                 bool operand_expected = false;
+                 for(const auto& var : variants) {
+                     if (var.addressing_mode != AddressingMode::IMPLIED && var.addressing_mode != AddressingMode::NONE) {
+                         operand_expected = true;
+                         break;
+                     }
+                 }
+                 if (!operand_expected && !actual_operand_value_str.empty()) {
+                     cerr << "Warning (Line " << lineNumber << "): Operand given for an implied mode instruction '" << instruction_mnemonic << "'" << endl;
+                 }
+                 if (actual_operand_value_str.empty()) { // Operandsızsa IMPLIED deneyelim
+                    determined_mode = AddressingMode::IMPLIED;
+                 } else {
+                    // Daha karmaşık mod belirleme veya hata
+                    cerr << "Warning (Line " << lineNumber << "): Addressing mode determination for '" << instruction_mnemonic << "' with operand '" << actual_operand_value_str << "' not fully implemented for demo." << endl;
+                    determined_mode = variants[0].addressing_mode; // İlkini al, muhtemelen XX basar
+                }
+            } else { 
+                 // Bu durum is_instruction() tarafından yakalanmalıydı.
+                cout << processedLineForRegex << " -> ERROR (Unknown instruction variant after check)" << endl;
+                return;
             }
         }
 
@@ -304,17 +378,16 @@ void parse(string line, int lineNumber, int &LC)
         
         if (!ins_data_opt.has_value())
         {
-            // Belirlenen modla komut bulunamadıysa, bu ciddi bir sorun.
-            // instructions.txt veya adresleme modu belirleme mantığı hatalı olabilir.
-            cerr << "FATAL Error (Line " << lineNumber << "): No instruction found for '" << instruction_mnemonic 
-                 << "' with mode " << static_cast<int>(determined_mode) 
-                 << ". Check instructions.txt and AddressingMode enum/logic." << endl;
+            // Eğer belirlenen modla komut bulunamazsa, alternatif modları dene (örn: LDAA $ADR -> DIRECT veya EXTENDED)
+            // Bu kısım, adresleme modu belirleme mantığının daha da geliştirilmesini gerektirir.
+            // Şimdilik, hata mesajını daha bilgilendirici yapalım.
+            cerr << "Error (Line " << lineNumber << "): No instruction variant found for '" << instruction_mnemonic 
+                << "' that matches determined addressing mode (" << static_cast<int>(determined_mode) 
+                << "). Check instructions.txt or parsing logic for this operand: '" << actual_operand_value_str << "'" << endl;
             cout << processedLineForRegex << " -> ERROR (Opcode/Mode Mismatch)" << endl;
             // LC'yi artıralım ki sonraki satırlar kaymasın, ama bu satır hatalı.
-            // Gerçek bir assembler burada durabilir veya hata sayısını artırabilir.
-            // Demo için, LC'yi komutun olası byte sayısına göre artıralım (varsayılan 1 byte)
             auto any_variant = instructionSet.get_instruction(instruction_mnemonic);
-            if (!any_variant.empty()) LC += any_variant[0].no_of_bytes; else LC +=1;
+            if (!any_variant.empty()) LC += any_variant[0].no_of_bytes; else LC +=1; // En az 1 byte ilerle
             return;
         }
         
@@ -329,26 +402,21 @@ void parse(string line, int lineNumber, int &LC)
         
         int expected_operand_bytes = instructionData.no_of_bytes - 1;
         if (operand_bytes_vec.size() < expected_operand_bytes) {
-             for (int i = operand_bytes_vec.size(); i < expected_operand_bytes; ++i) {
+            for (int i = operand_bytes_vec.size(); i < expected_operand_bytes; ++i) {
                 cout << " XX"; 
             }
         } else if (operand_bytes_vec.size() > expected_operand_bytes && expected_operand_bytes >= 0) {
-            // Fazla byte üretilmişse bu bir hatadır. Sadece beklenen kadarını basalım.
-            // Bu durumun olmaması gerekir.
-            // cerr << "Warning (Line " << lineNumber << "): Too many operand bytes generated for " << instruction_mnemonic << endl;
-            // Sadece beklenen kadarını bas, fazlasını at.
-            for (int i = 0; i < expected_operand_bytes; ++i) {
-                 // Bu döngü zaten yukarıda vardı, burası gereksiz.
-                 // Eğer operand_bytes_vec.size() > expected_operand_bytes ise, yukarıdaki döngü zaten doğru sayıda basar.
-                 // Aslında, hex_string_to_bytes'ın doğru sayıda byte döndürmesi lazım.
-            }
+            cerr << "Warning (Line " << lineNumber << "): Too many operand bytes generated for " << instruction_mnemonic 
+                << ". Expected " << expected_operand_bytes << ", got " << operand_bytes_vec.size() << endl;
+             // Sadece beklenen kadarını basmaya gerek yok, zaten for döngüsü doğru sayıda basar.
+             // Bu, operand_bytes_vec'in yanlış doldurulduğunu gösterir.
         }
         
         cout << endl;
         
         LC += instructionData.no_of_bytes;
-    } else { // Regex eşleşmediyse
-        if (!processedLineForRegex.empty()) { // Sadece boş olmayan ve eşleşmeyen satırlar için hata bas
+    } else { 
+        if (!processedLineForRegex.empty()) { 
             cerr << "Error (Line " << lineNumber << "): Syntax error (no regex match): '" << processedLineForRegex << "'" << endl;
             cout << processedLineForRegex << " -> ERROR (Syntax)" << endl;
         }

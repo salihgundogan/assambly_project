@@ -7,27 +7,6 @@
 #include <iostream>  // cerr ve cout için
 #include <stdexcept> // std::invalid_argument, std::out_of_range için
 
-// trim_whitespace fonksiyonunun tanımı burada olmalı veya
-// ortak bir utility dosyasından include edilmeli.
-// Şimdilik, main.cpp'de olduğunu ve link edileceğini varsayıyoruz.
-// Eğer ayrı derleniyorsa ve main.cpp'ye bağımlıysa, bu fonksiyonun
-// bildirimi de set_initializer.hpp'ye veya ortak bir başlığa eklenebilir.
-// En temizi, eğer bu fonksiyon sadece burada kullanılacaksa, buraya kopyalamaktır
-// ya da static inline olarak başlıkta tanımlamaktır.
-// Hızlı çözüm için, main.cpp'deki trim_whitespace'in linkleneceğini varsayalım.
-// VEYA, eğer main.cpp'deki trim_whitespace'i burada kullanmak istiyorsanız,
-// main.hpp içine bildirimini ekleyebilirsiniz:
-// extern std::string trim_whitespace(const std::string& str); // main.hpp'ye eklenebilir
-// Ya da en basiti, fonksiyonu buraya da kopyalayalım (DRY prensibine aykırı ama hızlı):
-
-// String'in başındaki ve sonundaki boşlukları temizleyen yardımcı fonksiyon
-// Bu fonksiyon main.cpp'de de vardı. İdealde tek bir yerde tanımlanmalı.
-// Eğer main.cpp ile birlikte link ediliyorsa sorun olmaz.
-// Aksi takdirde, buraya da kopyalayabilir veya ortak bir utility dosyasına taşıyabilirsiniz.
-// Şimdilik, main.cpp'deki ile aynı olduğunu varsayarak buraya eklemiyorum.
-// Eğer link hatası alırsanız (undefined reference to trim_whitespace),
-// main.cpp'deki trim_whitespace fonksiyonunu buraya kopyalayın.
-// Örnek olarak, main.cpp'deki trim_whitespace'i buraya kopyalayalım:
 std::string trim_whitespace_local(const std::string& str) { // İsim çakışmasını önlemek için _local ekledim
     const std::string whitespace = " \t\n\r\f\v";
     const auto strBegin = str.find_first_not_of(whitespace);

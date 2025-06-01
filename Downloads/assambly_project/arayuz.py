@@ -137,10 +137,10 @@ def parse_assembler_output(output_str: str) -> tuple[list[int], int]:
     
     for line_content in lines:
         if "->" not in line_content or \
-           "(Directive)" in line_content or \
-           "ERROR" in line_content.upper() or \
-           "HATA" in line_content.upper() or \
-           not line_content.strip(): 
+        "(Directive)" in line_content or \
+        "ERROR" in line_content.upper() or \
+        "HATA" in line_content.upper() or \
+        not line_content.strip(): 
             continue
         
         parts = line_content.split('->', 1) 
@@ -222,15 +222,15 @@ layout_sag = [
         sg.Text("B:"), sg.Input("00", size=(4,1), key='-B-', disabled=True, text_color=INPUT_TEXT_COLOR, background_color=INPUT_BG_COLOR, disabled_readonly_background_color=INPUT_BG_COLOR, disabled_readonly_text_color=DISABLED_TEXT_COLOR)
     ],
     [sg.Text("CCR:"), sg.Input("C0", size=(4,1), key='-CCR_BYTE-', disabled=True, text_color=INPUT_TEXT_COLOR, background_color=INPUT_BG_COLOR, disabled_readonly_background_color=INPUT_BG_COLOR, disabled_readonly_text_color=DISABLED_TEXT_COLOR),
-     sg.Checkbox("H", key='-H-', disabled=True), sg.Checkbox("I", key='-I-', disabled=True), 
-     sg.Checkbox("N", key='-N-', disabled=True), sg.Checkbox("Z", key='-Z-', disabled=True), 
-     sg.Checkbox("V", key='-V-', disabled=True), sg.Checkbox("C", key='-C-', disabled=True)
+    sg.Checkbox("H", key='-H-', disabled=True), sg.Checkbox("I", key='-I-', disabled=True), 
+    sg.Checkbox("N", key='-N-', disabled=True), sg.Checkbox("Z", key='-Z-', disabled=True), 
+    sg.Checkbox("V", key='-V-', disabled=True), sg.Checkbox("C", key='-C-', disabled=True)
     ],
     [sg.HorizontalSeparator(color=HEADER_TEXT_COLOR)],
     [sg.Text("Bellek Görüntüleyici", font=('Helvetica', 11, 'bold' ), text_color=HEADER_TEXT_COLOR)],
     [sg.Text("Başlangıç Adresi: $"), sg.Input("0000", size=(6,1), key='-MEM_DUMP_ADDR_IN-'), 
-     sg.Text("Satır Sayısı:"), sg.Spin([i for i in range(1, 17)], initial_value=8, size=(3,1), key='-MEM_DUMP_LINES-'),
-     sg.Button("Belleği Göster", key='-MEM_SHOW-', disabled=True) 
+    sg.Text("Satır Sayısı:"), sg.Spin([i for i in range(1, 33)], initial_value=8, size=(3,1), key='-MEM_DUMP_LINES-'),
+    sg.Button("Belleği Göster", key='-MEM_SHOW-', disabled=True) 
     ],
     [sg.Multiline(size=(60, 10), key='-MEM_OUTPUT-', disabled=True, font=('Courier New', 10), background_color=MEM_DUMP_BG_COLOR, text_color=MEM_DUMP_TEXT_COLOR, autoscroll=True)]
 ]
@@ -273,7 +273,7 @@ while True:
 
     if not engine_initialized: 
         if event != sg.WIN_CLOSED and event != '-EXIT-': 
-             sg.popup_error(MSG_MOTOR_YUKLENEMEDI_ICERIK_KISMI + " Lütfen programı kapatıp tekrar açın veya DLL sorununu çözün.", title="Kritik Motor Hatası")
+            sg.popup_error(MSG_MOTOR_YUKLENEMEDI_ICERIK_KISMI + " Lütfen programı kapatıp tekrar açın veya DLL sorununu çözün.", title="Kritik Motor Hatası")
         continue
 
     if event == '-ASSEMBLE_LOAD-':
@@ -321,8 +321,6 @@ while True:
             
             window['-STEP-'].update(disabled=not program_loaded)
             window['-RESET_CPU-'].update(disabled=not program_loaded)
-            window['-MEM_READ-'].update(disabled=not program_loaded) # Bu key artık yok, -MEM_SHOW- var
-            window['-MEM_WRITE-'].update(disabled=not program_loaded) # Bu key artık yok
             window['-MEM_SHOW-'].update(disabled=not program_loaded)
 
         except FileNotFoundError:
