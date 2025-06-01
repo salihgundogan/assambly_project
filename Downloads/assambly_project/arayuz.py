@@ -137,10 +137,10 @@ def parse_assembler_output(output_str: str) -> tuple[list[int], int]:
     
     for line_content in lines:
         if "->" not in line_content or \
-        "(Directive)" in line_content or \
-        "ERROR" in line_content.upper() or \
-        "HATA" in line_content.upper() or \
-        not line_content.strip(): 
+           "(Directive)" in line_content or \
+           "ERROR" in line_content.upper() or \
+           "HATA" in line_content.upper() or \
+           not line_content.strip(): 
             continue
         
         parts = line_content.split('->', 1) 
@@ -166,28 +166,27 @@ def format_memory_dump(start_address, byte_list, bytes_per_line=16):
     return dump_str
 
 # --- PySimpleGUI Arayüz Tanımlamaları ---
-# Siyah Tema için Renkler
 THEME_BACKGROUND_COLOR = 'black'
 TEXT_COLOR = 'white'
-INPUT_TEXT_COLOR = '#B0E0E6'  # Açık Toz Mavi
-INPUT_BG_COLOR = '#1C1C1C'    # Çok Koyu Gri
-DISABLED_TEXT_COLOR = '#777777' # Soluk Gri
-HEADER_TEXT_COLOR = '#6495ED' # Mısır Çiçeği Mavisi (Başlıklar için)
-MEM_DUMP_BG_COLOR = '#0D0D0D'   # Neredeyse Siyah
-MEM_DUMP_TEXT_COLOR = '#ADD8E6' # Açık Mavi
+INPUT_TEXT_COLOR = '#B0E0E6'  
+INPUT_BG_COLOR = '#1C1C1C'    
+DISABLED_TEXT_COLOR = '#777777' 
+HEADER_TEXT_COLOR = '#6495ED' 
+MEM_DUMP_BG_COLOR = '#0D0D0D'   
+MEM_DUMP_TEXT_COLOR = '#ADD8E6' 
 BUTTON_TEXT_COLOR = 'white'
-BUTTON_BG_COLOR = '#2A3B4C'   # Koyu Kurşun Mavisi
+BUTTON_BG_COLOR = '#2A3B4C'   
 
-sg.theme('Black') # Temayı siyah olarak ayarla
+sg.theme('Black') 
 
-# Global tema ayarlarını bazı elemanlar için üzerine yazabiliriz
-# Desteklenmeyen argümanlar kaldırıldı
+# sg.set_options() çağrısını doğru parametrelerle yapın
 sg.set_options(
     background_color=THEME_BACKGROUND_COLOR,
     text_color=TEXT_COLOR,
     button_color=(BUTTON_TEXT_COLOR, BUTTON_BG_COLOR)
+    # input_elements_background_color ve input_elements_text_color burada olmamalı
 )
-# Input elemanları için varsayılan renkleri tema seviyesinde ayarlamak daha doğru
+# Input elemanları için varsayılan renkleri tema seviyesinde ayarlayın
 sg.theme_input_background_color(INPUT_BG_COLOR)
 sg.theme_input_text_color(INPUT_TEXT_COLOR)
 
@@ -203,8 +202,8 @@ except FileNotFoundError:
     )
 
 layout_sol = [
-    [sg.Text("Assembly Kodunu Girin:")], # Renkler globalden gelecek
-    [sg.Multiline(size=(60, 25), key='-ASM_INPUT-', default_text=example_asm_content)] # Renkler globalden gelecek
+    [sg.Text("Assembly Kodunu Girin:")],
+    [sg.Multiline(size=(60, 25), key='-ASM_INPUT-', default_text=example_asm_content)]
 ]
 
 layout_sag = [
@@ -222,17 +221,25 @@ layout_sag = [
         sg.Text("B:"), sg.Input("00", size=(4,1), key='-B-', disabled=True, text_color=INPUT_TEXT_COLOR, background_color=INPUT_BG_COLOR, disabled_readonly_background_color=INPUT_BG_COLOR, disabled_readonly_text_color=DISABLED_TEXT_COLOR)
     ],
     [sg.Text("CCR:"), sg.Input("C0", size=(4,1), key='-CCR_BYTE-', disabled=True, text_color=INPUT_TEXT_COLOR, background_color=INPUT_BG_COLOR, disabled_readonly_background_color=INPUT_BG_COLOR, disabled_readonly_text_color=DISABLED_TEXT_COLOR),
-    sg.Checkbox("H", key='-H-', disabled=True), sg.Checkbox("I", key='-I-', disabled=True), 
-    sg.Checkbox("N", key='-N-', disabled=True), sg.Checkbox("Z", key='-Z-', disabled=True), 
-    sg.Checkbox("V", key='-V-', disabled=True), sg.Checkbox("C", key='-C-', disabled=True)
+     sg.Checkbox("H", key='-H-', disabled=True), sg.Checkbox("I", key='-I-', disabled=True), 
+     sg.Checkbox("N", key='-N-', disabled=True), sg.Checkbox("Z", key='-Z-', disabled=True), 
+     sg.Checkbox("V", key='-V-', disabled=True), sg.Checkbox("C", key='-C-', disabled=True)
     ],
     [sg.HorizontalSeparator(color=HEADER_TEXT_COLOR)],
     [sg.Text("Bellek Görüntüleyici", font=('Helvetica', 11, 'bold' ), text_color=HEADER_TEXT_COLOR)],
     [sg.Text("Başlangıç Adresi: $"), sg.Input("0000", size=(6,1), key='-MEM_DUMP_ADDR_IN-'), 
-    sg.Text("Satır Sayısı:"), sg.Spin([i for i in range(1, 33)], initial_value=8, size=(3,1), key='-MEM_DUMP_LINES-'),
-    sg.Button("Belleği Göster", key='-MEM_SHOW-', disabled=True) 
+     sg.Text("Satır Sayısı:"), sg.Spin([i for i in range(1, 33)], initial_value=8, size=(3,1), key='-MEM_DUMP_LINES-'),
+     sg.Button("Belleği Göster", key='-MEM_SHOW-', disabled=True) 
     ],
     [sg.Multiline(size=(60, 10), key='-MEM_OUTPUT-', disabled=True, font=('Courier New', 10), background_color=MEM_DUMP_BG_COLOR, text_color=MEM_DUMP_TEXT_COLOR, autoscroll=True)]
+]
+
+layout_alt_butonlar = [ 
+    sg.Button("Çevir & Yükle", key='-ASSEMBLE_LOAD-'), 
+    sg.Button("Adım At (Step)", key='-STEP-', disabled=True), 
+    sg.Button("Reset CPU", key='-RESET_CPU-', disabled=True),
+    sg.Button("Binary .txt Oluştur", key='-CREATE_BINARY_TXT-', disabled=True), 
+    sg.Button("Çıkış", key='-EXIT-')
 ]
 
 layout = [
@@ -241,12 +248,8 @@ layout = [
         sg.VSeperator(color=HEADER_TEXT_COLOR), 
         sg.Column(layout_sag)
     ],
-    [
-        sg.Button("Çevir & Yükle", key='-ASSEMBLE_LOAD-'), 
-        sg.Button("Adım At (Step)", key='-STEP-', disabled=True), 
-        sg.Button("Reset CPU", key='-RESET_CPU-', disabled=True), 
-        sg.Button("Çıkış", key='-EXIT-')
-    ]
+    [sg.HorizontalSeparator(color=HEADER_TEXT_COLOR)], 
+    layout_alt_butonlar 
 ]
 
 window = sg.Window("Motorola 6800 Assembler & Simülatör", layout, finalize=True)
@@ -257,8 +260,10 @@ if engine_initialized:
     update_gui_registers(window, cpu_s)
 else: 
     window['-ASSEMBLE_LOAD-'].update(disabled=True)
+    window['-CREATE_BINARY_TXT-'].update(disabled=True)
 
-# --- Olay Döngüsü --- (Değişiklik yok, aynı kalıyor)
+
+# --- Olay Döngüsü ---
 program_loaded = False
 current_org_address = 0 
 last_dump_start_addr = 0 
@@ -273,7 +278,7 @@ while True:
 
     if not engine_initialized: 
         if event != sg.WIN_CLOSED and event != '-EXIT-': 
-            sg.popup_error(MSG_MOTOR_YUKLENEMEDI_ICERIK_KISMI + " Lütfen programı kapatıp tekrar açın veya DLL sorununu çözün.", title="Kritik Motor Hatası")
+             sg.popup_error(MSG_MOTOR_YUKLENEMEDI_ICERIK_KISMI + " Lütfen programı kapatıp tekrar açın veya DLL sorununu çözün.", title="Kritik Motor Hatası")
         continue
 
     if event == '-ASSEMBLE_LOAD-':
@@ -286,7 +291,7 @@ while True:
         
         try:
             result = subprocess.run(
-                [assembler_executable, temp_asm_file], 
+                [assembler_executable, temp_asm_file, "object_output.txt"], # Çıktı dosyası adı eklendi
                 capture_output=True, text=True, check=False, encoding='utf-8'
             )
             assembler_stdout = result.stdout
@@ -295,10 +300,10 @@ while True:
             full_assembler_output = "--- STDOUT ---\n" + assembler_stdout + "\n--- STDERR ---\n" + assembler_stderr
             window['-ASM_OUTPUT-'].update(full_assembler_output)
 
-            if "ERROR" in assembler_stdout.upper() or "HATA" in assembler_stdout.upper() or \
-               "ERROR" in assembler_stderr.upper() or "HATA" in assembler_stderr.upper() or \
-               result.returncode != 0:
-                sg.popup_error(f"Assembly çevirme hatası!\n{full_assembler_output}", title="Assembler Hatası")
+            # Hata kontrolü STDERR'e ve return code'a göre yapılıyor
+            if result.returncode != 0 or "ERROR" in assembler_stderr.upper() or "HATA" in assembler_stderr.upper():
+                error_message_to_show = assembler_stderr if assembler_stderr.strip() else assembler_stdout
+                sg.popup_error(f"Assembly çevirme hatası!\n{error_message_to_show}", title="Assembler Hatası")
                 program_loaded = False
                 machine_code_bytes_cache = []
             else: 
@@ -315,13 +320,15 @@ while True:
                     sg.popup_quick_message(f"Program belleğe ${org_addr:04X} adresinden yüklendi. PC = ${current_cpu_state.pc:04X}", auto_close_duration=3)
                     program_loaded = True
                 else:
-                    sg.popup_error("Assembler çıktısından makine kodu ayrıştırılamadı.", title="Ayrıştırma Hatası")
+                    sg.popup_error("Assembler çıktısından makine kodu ayrıştırılamadı (STDOUT boş veya hatalı).", title="Ayrıştırma Hatası")
                     program_loaded = False
                     machine_code_bytes_cache = []
             
             window['-STEP-'].update(disabled=not program_loaded)
             window['-RESET_CPU-'].update(disabled=not program_loaded)
             window['-MEM_SHOW-'].update(disabled=not program_loaded)
+            window['-CREATE_BINARY_TXT-'].update(disabled=not program_loaded)
+
 
         except FileNotFoundError:
             output_msg = f"HATA: C++ Assembler ('{assembler_executable}') bulunamadı."
@@ -370,8 +377,28 @@ while True:
         else:
              sg.popup_error(MSG_PROGRAM_YUKLENMEDI_ICERIK, title=MSG_PROGRAM_YUKLENMEDI_BASLIK)
     
-    # Bellek İşlemleri bölümü kaldırıldığı için -MEM_READ- ve -MEM_WRITE- olayları da kaldırıldı.
-    # Sadece -MEM_SHOW- kaldı.
+    elif event == '-CREATE_BINARY_TXT-': 
+        if program_loaded and machine_code_bytes_cache:
+            save_filename = sg.popup_get_file(
+                "Binary String Dosyasını Kaydet",
+                save_as=True,
+                default_extension=".txt",
+                file_types=(("Text Dosyaları", "*.txt"), ("Tüm Dosyalar", "*.*")),
+                no_window=True 
+            )
+            if save_filename:
+                try:
+                    with open(save_filename, "w", encoding='utf-8') as f:
+                        for byte_val in machine_code_bytes_cache:
+                            binary_string = format(byte_val, '08b') 
+                            f.write(binary_string + "\n")
+                    sg.popup(f"Binary string dosyası başarıyla kaydedildi:\n{save_filename}", title="Kaydetme Başarılı")
+                except Exception as e:
+                    sg.popup_error(f"Dosya kaydedilirken hata oluştu:\n{e}", title="Kaydetme Hatası")
+        elif not machine_code_bytes_cache:
+            sg.popup_error("Kaydedilecek makine kodu bulunmuyor. Lütfen önce 'Çevir & Yükle' yapın.", title="Veri Yok")
+        else: 
+            sg.popup_error(MSG_PROGRAM_YUKLENMEDI_ICERIK, title=MSG_PROGRAM_YUKLENMEDI_BASLIK)
 
     elif event == '-MEM_SHOW-': 
         if program_loaded:
